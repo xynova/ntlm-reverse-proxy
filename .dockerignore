@@ -1,0 +1,8 @@
+# ignore .git and .cache folders
+.*
+*.md
+LICENSE
+Dockerfile
+
+# vendor
+vendor
