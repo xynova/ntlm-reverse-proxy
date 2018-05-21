@@ -102,8 +102,6 @@ func (a *ntlm2Authenticator) execChallengeRequest(url string, client *http.Clien
 	var(
 		resp      *http.Response
 		challenge string
-
-
 	)
 
 
@@ -124,7 +122,7 @@ func (a *ntlm2Authenticator) execChallengeRequest(url string, client *http.Clien
 
 	// retrieve Www-TryAuthenticate header from response
 	type2Header := resp.Header.Get(authenticateHeaderKey)
-	if type2Header == "" {
+	if len(type2Header) < 10 {
 		return nil, errors.New("Empty "+ authenticateHeaderKey +" header")
 	}
 
@@ -133,6 +131,7 @@ func (a *ntlm2Authenticator) execChallengeRequest(url string, client *http.Clien
 		return nil, err
 	}
 
+	log.Printf("%s",  "Challenge recieved")
 	return challengeBytes, nil
 }
 
@@ -155,5 +154,6 @@ func (a *ntlm2Authenticator) execAuthRequest(url string, userAuthMsg *ntlm.Authe
 		return false,  err
 	}
 
+	log.Printf("%s",  resp.Status)
 	return resp.StatusCode == http.StatusOK, nil
 }

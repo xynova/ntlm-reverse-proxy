@@ -11,6 +11,7 @@ RUN dep ensure --vendor-only
 COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -o /app .
 
-FROM scratch
+FROM alpine:3.7
+RUN apk add --update ca-certificates
 COPY --from=builder /app ./
 ENTRYPOINT ["./app"]
