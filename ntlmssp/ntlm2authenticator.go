@@ -9,20 +9,18 @@ import (
 	"log"
 )
 
-const (
-	negotiateUnicode    = 0x00000001 // Text strings are in unicode
-	negotiateOEM        = 0x00000002 // Text strings are in OEM
-	requestTarget       = 0x00000004 // Server return its auth realm
-	negotiateNTLM       = 0x00000200 // NTLM authentication
-	negotiateAlwaysSign = 0x00008000 // Sign for all security levels
-	negotiateNTLM2Key 	= 0x00080000
-)
+
 
 const (
 	authHeaderKey         = "Authorization"
 	authenticateHeaderKey = "WWW-Authenticate"
 	ntlmHeaderValuePrefix = "NTLM "
 )
+
+type ConnectionAuthenticator interface {
+	TryAuthenticate(url string,  client *http.Client) ( success bool, err error )
+}
+
 
 type ntlm2Authenticator struct {
 	username string
@@ -76,9 +74,14 @@ func (a *ntlm2Authenticator) getNTLM2NegotiateMsg() []byte {
 	)
 
 	ret := make([]byte, 44)
-	flags := negotiateAlwaysSign | negotiateNTLM | requestTarget | negotiateOEM | negotiateUnicode | negotiateNTLM2Key
+	flags := ntlm.NTLMSSP_NEGOTIATE_ALWAYS_SIGN |
+		ntlm.NTLMSSP_NEGOTIATE_NTLM |
+		ntlm.NTLMSSP_REQUEST_TARGET |
+		ntlm.NTLM_NEGOTIATE_OEM |
+		ntlm.NTLMSSP_NEGOTIATE_UNICODE |
+		ntlm.NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY // negotiateNTLM2Key
 
-	copy(ret, []byte("NTLMSSP\x00")) // protocol
+		copy(ret, []byte("NTLMSSP\x00")) // protocol
 	put32(ret[8:], 1)                // type
 	put32(ret[12:], uint32(flags))   // flags
 	put16(ret[16:], 0)               // NT domain name length
@@ -127,7 +130,7 @@ func (a *ntlm2Authenticator) execChallengeRequest(url string, client *http.Clien
 	}
 
 	challenge = strings.Replace(type2Header, ntlmHeaderValuePrefix, "", -1)
-	if challengeBytes, err = decBase64(challenge); err != nil {
+	if challengeBytes, err = decodeBase64(challenge); err != nil {
 		return nil, err
 	}
 

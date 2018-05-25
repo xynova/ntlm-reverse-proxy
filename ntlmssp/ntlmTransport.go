@@ -49,9 +49,10 @@ func (t *ntlmTransport) RoundTrip(req *http.Request) ( *http.Response,  error) {
 	}
 
 	// Pass-through if its not StatusUnauthorized
-	if rt.StatusCode != http.StatusUnauthorized {
+	if rt.StatusCode != http.StatusUnauthorized  {
 		return rt, nil
 	}
+
 
 	// Try authorize request
 	if rt.StatusCode == http.StatusUnauthorized {

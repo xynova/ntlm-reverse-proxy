@@ -9,8 +9,8 @@ import (
 
 
 var (
-	encBase64 = base64.StdEncoding.EncodeToString
-	decBase64 = base64.StdEncoding.DecodeString
+	encBase64    = base64.StdEncoding.EncodeToString
+	decodeBase64 = base64.StdEncoding.DecodeString
 )
 
 

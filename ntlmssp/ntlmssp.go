@@ -7,9 +7,11 @@ import (
 )
 
 
+// Default client with nice defaults
 var DefaultClient *http.Client
 
 
+// Ntlm2 web authenticator
 func NewConnectionAuthenticator(username, password string) ConnectionAuthenticator {
 	return &ntlm2Authenticator{
 		username:username,
@@ -17,19 +19,12 @@ func NewConnectionAuthenticator(username, password string) ConnectionAuthenticat
 	}
 }
 
-
+// Ntlm transport
 func NewNtlmTransport( authenticator ConnectionAuthenticator, client *http.Client) http.RoundTripper {
-
 	return  &ntlmTransport{
 		Authenticator : authenticator,
 		Client: client,
 	}
-}
-
-
-
-type ConnectionAuthenticator interface {
-	TryAuthenticate(url string,  client *http.Client) ( success bool, err error )
 }
 
 
