@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"github.com/spf13/viper"
 	"errors"
+	"strings"
 )
 
 type proxyConfig struct {
@@ -23,6 +24,7 @@ func init(){
 	viper.SetDefault("username","")
 	viper.SetDefault("password","")
 	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-","_") )
 }
 
 

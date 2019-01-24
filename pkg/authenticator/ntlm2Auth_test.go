@@ -1,10 +1,10 @@
-package ntlmssp
+package authenticator
 
 import (
 	"testing"
 	"net/http/httptest"
 	"net/http"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"bytes"
 	"strings"
@@ -19,6 +19,7 @@ func TestChallengeRequested(t *testing.T) {
 		output string
 		// Exactly what CURL does
 		expected = "NTLM TlRMTVNTUAABAAAAB4IIAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAMAA="
+		roundTripper http.RoundTripper = &http.Transport{}
 	)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +30,8 @@ func TestChallengeRequested(t *testing.T) {
 	defer s.Close()
 
 	auth := &ntlm2Authenticator{ }
-	auth.execChallengeRequest(s.URL, DefaultClient)
+
+	auth.execChallengeRequest(s.URL, &roundTripper)
 
 	if output != expected {
 		t.Errorf("Invalid negotiate message %s: expected %s", output, expected)
@@ -44,6 +46,7 @@ func TestChallengeReceived(t *testing.T) {
 	var (
 		msg2 = "NTLM TlRMTVNTUAABAAAAB4IIAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAMAA="
 		expected,_ = decodeBase64(strings.Replace(msg2,ntlmHeaderValuePrefix,"",1) )
+		roundTripper http.RoundTripper = &http.Transport{}
 	)
 
 
@@ -55,7 +58,7 @@ func TestChallengeReceived(t *testing.T) {
 	defer s.Close()
 
 	auth := &ntlm2Authenticator{ }
-	output, _ := auth.execChallengeRequest(s.URL, DefaultClient)
+	output, _ := auth.execChallengeRequest(s.URL, &roundTripper)
 
 	if bytes.Equal(output, expected) == false {
 		t.Errorf("Wrong challenge %s: expected %s", output, expected)
@@ -69,9 +72,10 @@ func TestChallengeAnswered(t *testing.T){
 
 	var (
 		user = "user"
-		password = "password"
+		password = "Password"
 		output string
 		err error
+		roundTripper http.RoundTripper = &http.Transport{}
 	)
 
 
@@ -97,7 +101,7 @@ func TestChallengeAnswered(t *testing.T){
 	defer s.Close()
 	//
 	auth := &ntlm2Authenticator{ }
-	auth.execAuthRequest(s.URL, authMsg, DefaultClient)
+	auth.execAuthRequest(s.URL, authMsg, &roundTripper)
 
 	if strings.Contains(output,ntlmHeaderValuePrefix) == false {
 		t.Errorf("Incorrect Auth header %s", output)
