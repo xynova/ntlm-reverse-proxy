@@ -1,4 +1,4 @@
-package ntlmssp
+package authenticator
 
 import (
 	"encoding/binary"
@@ -6,7 +6,7 @@ import (
 	"github.com/ThomsonReutersEikon/go-ntlm/ntlm"
 	"strings"
 	"errors"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 
@@ -17,17 +17,21 @@ const (
 	ntlmHeaderValuePrefix = "NTLM "
 )
 
-type ConnectionAuthenticator interface {
-	TryAuthenticate(url string,  client *http.Client) ( success bool, err error )
-}
 
+// NTLM2 web authenticator
+func NewNtlmAuthenticator(username, password string) Authenticator {
+	return &ntlm2Authenticator{
+		Username:username,
+		Password:password,
+	}
+}
 
 type ntlm2Authenticator struct {
-	username string
-	password string
+	Username string
+	Password string
 }
 
-func (a *ntlm2Authenticator) TryAuthenticate(url string,  client *http.Client) ( success bool, err error ){
+func (a *ntlm2Authenticator) TryAuthenticate(url string,  roundTripper *http.RoundTripper) ( success bool, err error ){
 
 	var(
 		challengeBytes []byte
@@ -36,8 +40,9 @@ func (a *ntlm2Authenticator) TryAuthenticate(url string,  client *http.Client) (
 		userAuthMsg *ntlm.AuthenticateMessage
 	)
 
+
 	// Trigger a ntlm challenge from the server
-	if challengeBytes, err = a.execChallengeRequest(url, client); err != nil {
+	if challengeBytes, err = a.execChallengeRequest(url, roundTripper); err != nil {
 		return false, err
 	}
 
@@ -50,7 +55,7 @@ func (a *ntlm2Authenticator) TryAuthenticate(url string,  client *http.Client) (
 		return false, err
 	}
 
-	session.SetUserInfo(a.username, a.password, "")
+	session.SetUserInfo(a.Username, a.Password, "")
 	if err = session.ProcessChallengeMessage(challengeMgs); err != nil {
 		return false, err
 	}
@@ -59,7 +64,7 @@ func (a *ntlm2Authenticator) TryAuthenticate(url string,  client *http.Client) (
 		return false, err
 	}
 
-	if success, err = a.execAuthRequest(url, userAuthMsg, client); err != nil {
+	if success, err = a.execAuthRequest(url, userAuthMsg, roundTripper); err != nil {
 		return false, err
 	}
 
@@ -100,26 +105,25 @@ func (a *ntlm2Authenticator) getNTLM2NegotiateMsg() []byte {
 	return ret
 }
 
-func (a *ntlm2Authenticator) execChallengeRequest(url string, client *http.Client) (challengeBytes []byte, err  error ) {
+func (a *ntlm2Authenticator) execChallengeRequest(url string, roundTripper *http.RoundTripper) (challengeBytes []byte, err  error ) {
 
 	var(
 		resp      *http.Response
 		challenge string
 	)
 
-
 	msg1Req, _ := http.NewRequest("GET", url, strings.NewReader(""))
 
 	type1Header := ntlmHeaderValuePrefix + encBase64(a.getNTLM2NegotiateMsg())
 	msg1Req.Header.Add(authHeaderKey, type1Header)
 
-	log.Print("Negotiate NTML challenge")
-	if resp, err = client.Do(msg1Req); err != nil {
+	log.Printf("%x: Negotiate NTML challenge ", roundTripper)
+	if resp, err =  (*roundTripper).RoundTrip(msg1Req); err != nil {
 		return nil, err
 	}
 
 	// Ensure connection is reused
-	if err = closeResponseBody(resp); err != nil {
+	if err = CloseResponseBody(resp); err != nil {
 		return nil, err
 	}
 
@@ -134,11 +138,11 @@ func (a *ntlm2Authenticator) execChallengeRequest(url string, client *http.Clien
 		return nil, err
 	}
 
-	log.Printf("%s",  "Challenge recieved")
+	log.Printf("%x: Challenge received from server",  roundTripper)
 	return challengeBytes, nil
 }
 
-func (a *ntlm2Authenticator) execAuthRequest(url string, userAuthMsg *ntlm.AuthenticateMessage, client *http.Client) ( success bool, err  error ) {
+func (a *ntlm2Authenticator) execAuthRequest(url string, userAuthMsg *ntlm.AuthenticateMessage, roundTripper *http.RoundTripper) ( success bool, err  error ) {
 
 	var(
 		resp      *http.Response
@@ -149,14 +153,19 @@ func (a *ntlm2Authenticator) execAuthRequest(url string, userAuthMsg *ntlm.Authe
 	type3Header :=  ntlmHeaderValuePrefix + encBase64(userAuthMsg.Bytes())
 	msg3Req.Header.Set(authHeaderKey, type3Header)
 
-	log.Print("Respond to NTML challenge")
-	if resp, err = client.Do(msg3Req); err != nil {
+	log.Printf("%x: Respond to NTML challenge", roundTripper)
+	if resp, err = (*roundTripper).RoundTrip(msg3Req); err != nil {
 		return false, err
 	}
-	if err = closeResponseBody(resp); err != nil {
+	if err = CloseResponseBody(resp); err != nil {
 		return false,  err
 	}
 
-	log.Printf("%s",  resp.Status)
-	return resp.StatusCode == http.StatusOK, nil
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("%x: Challenge response was successful (%s)", roundTripper, resp.Status)
+		return true, nil
+	} else {
+		log.Warnf("%x: The Challenge response was unsuccessful (%s)", roundTripper, resp.Status)
+		return false, nil
+	}
 }

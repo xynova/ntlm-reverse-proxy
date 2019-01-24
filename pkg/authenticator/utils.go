@@ -1,4 +1,4 @@
-package ntlmssp
+package authenticator
 
 import (
 	"net/http"
@@ -15,7 +15,7 @@ var (
 
 
 
-func closeResponseBody(resp *http.Response) error {
+func CloseResponseBody(resp *http.Response) error {
 
 	if resp.Body == nil {
 		return nil

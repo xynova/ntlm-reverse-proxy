@@ -1,34 +1,44 @@
-package ntlmssp
+package transport
 
 import (
 	"net/http"
 	"io"
 	"io/ioutil"
 	"bytes"
-	"log"
+	log "github.com/sirupsen/logrus"
+	"github.com/xynova/ntlm-reverse-proxy/pkg/authenticator"
 )
 
 
+
+// NTLM2 transport
+func NewNtlmTransport( authenticator authenticator.Authenticator, factory HttpTransportFactory) http.RoundTripper {
+	return  &ntlmTransport{
+		Authenticator : authenticator,
+		Factory: factory,
+	}
+}
 
 
 
 // ntlmTransport is implementation of http.RoundTripper interface
 type ntlmTransport struct {
-	Authenticator ConnectionAuthenticator
-	Client        *http.Client
+	Authenticator authenticator.Authenticator
+	Factory       HttpTransportFactory
 }
+
 
 
 // RoundTrip method send http request and tries to perform NTLM authentication
 func (t *ntlmTransport) RoundTrip(req *http.Request) ( *http.Response,  error) {
 
 	var (
-		rt       *http.Response
-		err      error
-		bodyCopy io.ReadCloser
+		rt                   *http.Response
+		err                  error
+		bodyCopy             io.ReadCloser
 		connectionAuthorized bool
+		roundTripper         http.RoundTripper = t.Factory.NewTransport()
 	)
-
 
 	req.RequestURI = ""
 
@@ -43,8 +53,10 @@ func (t *ntlmTransport) RoundTrip(req *http.Request) ( *http.Response,  error) {
 		defer bodyCopy.Close()
 	}
 
+
+
 	// Try our luck, connection might be authenticated
-	if rt, err = t.Client.Do(req); err != nil  {
+	if rt, err = roundTripper.RoundTrip(req); err != nil  {
 		return nil, err
 	}
 
@@ -54,32 +66,38 @@ func (t *ntlmTransport) RoundTrip(req *http.Request) ( *http.Response,  error) {
 	}
 
 
+
+
 	// Try authorize request
 	if rt.StatusCode == http.StatusUnauthorized {
 
-		log.Print("Try to authenticate connection")
+		log.Printf("%x: Try to authenticate connection", &roundTripper)
 		// Ensure connection is reused
-		if err = closeResponseBody(rt); err != nil {
+		if err = authenticator.CloseResponseBody(rt); err != nil {
 			return nil, err
 		}
 
 		// try to authenticate connection
-		if connectionAuthorized,err = t.Authenticator.TryAuthenticate(req.URL.String(), t.Client); err != nil {
+		if connectionAuthorized,err = t.Authenticator.TryAuthenticate(req.URL.String(), &roundTripper); err != nil {
 			return nil, err
 		}
 
-		if connectionAuthorized {
-			log.Print("Connection authenticated")
+		// Authorization did not succeed, return the first response
+		if !connectionAuthorized {
+			return rt, nil
 		}
+
+		log.Printf("%x: Connection authorized re-issuing request", &roundTripper)
 
 		if bodyCopy != nil {
 			req.Body = bodyCopy
 		}
 
 		// re-issue request
-		if rt, err = t.Client.Do(req); err != nil {
+		if rt, err = roundTripper.RoundTrip(req); err != nil {
 			return nil, err
 		}
+
 	}
 
 	return rt, nil
