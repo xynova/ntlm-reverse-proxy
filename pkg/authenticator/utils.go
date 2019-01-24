@@ -21,10 +21,11 @@ func CloseResponseBody(resp *http.Response) error {
 		return nil
 	}
 
+	defer resp.Body.Close()
+
 	if _, err := io.Copy(ioutil.Discard, resp.Body); err != nil {
 		return  err
 	}
-	resp.Body.Close()
 
 	return nil
 }

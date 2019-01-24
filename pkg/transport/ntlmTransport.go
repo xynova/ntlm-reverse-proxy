@@ -83,17 +83,16 @@ func (t *ntlmTransport) RoundTrip(req *http.Request) ( *http.Response,  error) {
 		}
 
 		// Authorization did not succeed, return the first response
-		if !connectionAuthorized {
-			return rt, nil
+		if connectionAuthorized {
+			log.Printf("%x: Connection authorized, re-issuing request", &roundTripper)
 		}
 
-		log.Printf("%x: Connection authorized re-issuing request", &roundTripper)
 
 		if bodyCopy != nil {
 			req.Body = bodyCopy
 		}
 
-		// re-issue request
+		// re-issue request to return open response body
 		if rt, err = roundTripper.RoundTrip(req); err != nil {
 			return nil, err
 		}
