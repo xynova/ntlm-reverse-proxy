@@ -1,4 +1,4 @@
-FROM golang:1.11 AS builder
+FROM golang:1.12 AS builder
 
 # Download and install the latest release of dep
 RUN curl -Ls -o /usr/bin/dep https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 \
