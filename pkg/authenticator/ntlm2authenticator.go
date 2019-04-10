@@ -117,7 +117,7 @@ func (a *ntlm2Authenticator) execChallengeRequest(url string, roundTripper *http
 	type1Header := ntlmHeaderValuePrefix + encBase64(a.getNTLM2NegotiateMsg())
 	msg1Req.Header.Add(authHeaderKey, type1Header)
 
-	log.Printf("%x: Negotiate NTML challenge ", roundTripper)
+	log.Debugf("%x: Negotiate NTML challenge ", roundTripper)
 	if resp, err =  (*roundTripper).RoundTrip(msg1Req); err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (a *ntlm2Authenticator) execChallengeRequest(url string, roundTripper *http
 		return nil, err
 	}
 
-	log.Printf("%x: Challenge received from server",  roundTripper)
+	log.Debugf("%x: Challenge received from server",  roundTripper)
 	return challengeBytes, nil
 }
 
@@ -153,7 +153,7 @@ func (a *ntlm2Authenticator) execAuthRequest(url string, userAuthMsg *ntlm.Authe
 	type3Header :=  ntlmHeaderValuePrefix + encBase64(userAuthMsg.Bytes())
 	msg3Req.Header.Set(authHeaderKey, type3Header)
 
-	log.Printf("%x: Respond to NTML challenge", roundTripper)
+	log.Debugf("%x: Respond to NTML challenge", roundTripper)
 	if resp, err = (*roundTripper).RoundTrip(msg3Req); err != nil {
 		return false, err
 	}
@@ -162,7 +162,7 @@ func (a *ntlm2Authenticator) execAuthRequest(url string, userAuthMsg *ntlm.Authe
 	}
 
 	if resp.StatusCode == http.StatusOK {
-		log.Printf("%x: Challenge response was successful (%s)", roundTripper, resp.Status)
+		log.Debugf("%x: Challenge response was successful (%s)", roundTripper, resp.Status)
 		return true, nil
 	} else {
 		log.Warnf("%x: The Challenge response was unsuccessful (%s)", roundTripper, resp.Status)

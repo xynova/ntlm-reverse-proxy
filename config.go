@@ -13,6 +13,7 @@ type proxyConfig struct {
 	username string
 	password string
 	targetUrl *url.URL
+	logLevel string
 }
 
 
@@ -23,6 +24,7 @@ func init(){
 	viper.SetDefault("address","localhost")
 	viper.SetDefault("username","")
 	viper.SetDefault("password","")
+	viper.SetDefault("loglevel","info")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-","_") )
 }
@@ -36,6 +38,7 @@ func parseProxyConfig() (*proxyConfig, error){
 		username    = viper.GetString("username")
 		password 	= viper.GetString("password")
 		targetUrl	= viper.GetString("targetUrl")
+		logLevel	= viper.GetString("logLevel")
 		uri *url.URL
 		err error
 	)
@@ -65,6 +68,7 @@ func parseProxyConfig() (*proxyConfig, error){
 		username:username,
 		password:password,
 		targetUrl:uri,
+		logLevel:logLevel,
 
 	}
 
