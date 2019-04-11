@@ -1,14 +1,13 @@
 package main
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
+	"github.com/xynova/ntlm-reverse-proxy/pkg/authenticator"
+	"github.com/xynova/ntlm-reverse-proxy/pkg/transport"
 	"net/http"
 	"net/http/httputil"
-	"github.com/xynova/ntlm-reverse-proxy/pkg/transport"
-	"github.com/xynova/ntlm-reverse-proxy/pkg/authenticator"
-	"fmt"
 	"os"
-	"strings"
 )
 
 
@@ -23,13 +22,8 @@ func main() {
 	}
 
 	// Set log level
-	switch lvl := strings.ToLower(config.logLevel) ; lvl {
-		case "debug":
-			log.SetLevel(log.DebugLevel)
-		case "error":
-			log.SetLevel(log.ErrorLevel)
-		default:
-			log.SetLevel(log.InfoLevel)
+	if config.verboseLogs {
+		log.SetLevel(log.DebugLevel)
 	}
 
 

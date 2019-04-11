@@ -1,7 +1,7 @@
 FROM golang:1.12 AS builder
 
 # Download and install the latest release of dep
-RUN curl -Ls -o /usr/bin/dep https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 \
+RUN curl -Ls -o /usr/bin/dep https://github.com/golang/dep/releases/download/v0.5.1/dep-linux-amd64 \
     && chmod +x /usr/bin/dep
 
 # Copy the code from the host and compile it

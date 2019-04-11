@@ -71,7 +71,7 @@ func (t *ntlmTransport) RoundTrip(req *http.Request) ( *http.Response,  error) {
 	// Try authorize request
 	if rt.StatusCode == http.StatusUnauthorized {
 
-		log.Debugf("%x: Try to authenticate connection", &roundTripper)
+		log.Debugf("%x: Try to authenticate connection to %s", &roundTripper, req.URL)
 		// Ensure connection is reused
 		if err = authenticator.CloseResponseBody(rt); err != nil {
 			return nil, err
