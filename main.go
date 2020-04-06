@@ -41,8 +41,15 @@ func main() {
 
 	// Start server
 	listenAddr := fmt.Sprintf("%s:%d",config.address,config.port)
-	log.Infof("Starting unencrypted listener on %s:",listenAddr)
-	log.Fatal(http.ListenAndServe( listenAddr, http.Handler(proxy)))
+
+
+	if len(config.tlsKeyFile) > 0 {
+		log.Infof("Starting TLS listener on %s:",listenAddr)
+		log.Fatal(http.ListenAndServeTLS(listenAddr,config.tlsCertFile, config.tlsKeyFile, http.Handler(proxy)))
+	}else {
+		log.Infof("Starting unencrypted listener on %s:",listenAddr)
+		log.Fatal(http.ListenAndServe( listenAddr, http.Handler(proxy)))
+	}
 }
 
 func init() {
